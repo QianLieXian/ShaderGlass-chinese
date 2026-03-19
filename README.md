@@ -2,7 +2,7 @@
 
 ## ShaderGlass
 
-Overlay for running GPU shaders on top of Windows desktop.
+Overlay for running GPU shaders on top of Windows desktop and Wine.
 
 ### Features
 
@@ -29,22 +29,15 @@ Check out [Online Manual](https://mausimus.github.io/ShaderGlass/MANUAL.html) fo
 
 ### Download
 
-Latest stable release (v1.2.3, 12 Dec 2025):
-* device capture input (webcam/capture card)
-* hide original mouse cursor when "Capture Cursor" is enabled
-* ability to edit global hotkeys + more of them
-* added Sonkun's presets
-
-https://github.com/mausimus/ShaderGlass/releases/download/v1.2.3/ShaderGlass-1.2.3.1-win-x64.zip
-
-<br/>
-
-Latest beta release (v1.2.5, 28 Feb 2026):
-* capture support when running under Wine on Linux
+Latest stable release (v1.3.0, 19 Mar 2026):
+* desktop/window capture under Linux/Wine
 * shader search function
 * shader library update
+* minor enhancements
 
-https://github.com/mausimus/ShaderGlass/releases/download/v1.2.5/ShaderGlass-1.2.5-beta-win-x64.zip
+https://github.com/mausimus/ShaderGlass/releases/download/v1.3.0/ShaderGlass-1.3.0.win-x64.zip
+
+[Betas and older versions available here](https://github.com/mausimus/ShaderGlass/releases)
 
 <br/>
 
@@ -61,8 +54,6 @@ https://github.com/mausimus/ShaderGlass/releases/download/v1.2.5/ShaderGlass-1.2
 Black Frame Insertion (BFI) and Blur Busters' CRT Beam Simulator have been spun off
 into a new app [ShaderBeam](https://github.com/mausimus/ShaderBeam).
 
-[Betas and older versions available here](https://github.com/mausimus/ShaderGlass/releases)
-
 <br/>
 
 ### Requirements
@@ -71,7 +62,7 @@ into a new app [ShaderBeam](https://github.com/mausimus/ShaderBeam).
   * will work on version 1903 but in limited capacity (no Desktop Glass mode)
   * Windows 11 allows the __removal of yellow border__ (see [FAQ](FAQ.md#windows-10) for tips on avoiding it on Windows 10)
 * DirectX 11-capable GPU
-* Linux: running under Wine is supported in latest beta, using ScreenCast/PipeWire for capture (clone mode only)
+* __Linux__: running under Wine/Proton is supported since 1.3 using ScreenCast/PipeWire for capture (clone mode only)
 
 <br/>
 
