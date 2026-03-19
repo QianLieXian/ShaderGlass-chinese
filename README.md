@@ -35,7 +35,7 @@ Latest stable release (v1.3.0, 19 Mar 2026):
 * shader library update
 * minor enhancements
 
-https://github.com/mausimus/ShaderGlass/releases/download/v1.3.0/ShaderGlass-1.3.0.win-x64.zip
+[https://github.com/mausimus/ShaderGlass/releases/download/v1.3.0/ShaderGlass-1.3.0.win-x64.zip](https://github.com/mausimus/ShaderGlass/releases/download/v1.3.0/ShaderGlass-1.3.0-win-x64.zip)
 
 [Betas and older versions available here](https://github.com/mausimus/ShaderGlass/releases)
 
