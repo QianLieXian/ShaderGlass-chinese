@@ -1,4 +1,5 @@
 ![License](https://img.shields.io/github/license/mausimus/ShaderGlass?color=red) ![GitHub Stars](https://img.shields.io/github/stars/mausimus/ShaderGlass?color=yellow) ![Downloads](https://img.shields.io/github/downloads/mausimus/ShaderGlass/total) ![Latest Release](https://img.shields.io/github/release-date/mausimus/ShaderGlass?label=latest%20release&color=blue) ![Beta Release](https://img.shields.io/github/release-date-pre/mausimus/ShaderGlass?label=beta%20release&color=orange)
+<img width="173" height="386" alt="image" src="https://github.com/user-attachments/assets/586ef704-a319-4f06-bb8d-938ad84413ec" />
 
 ## ShaderGlass
 
