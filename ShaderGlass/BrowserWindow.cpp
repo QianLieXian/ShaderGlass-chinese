@@ -407,7 +407,6 @@ HTREEITEM BrowserWindow::AddItemToTree(HWND hwndTV, const char* text, LPARAM lPa
         tvi.iSelectedImage = g_nClosed;
         TreeView_SetItem(hwndTV, &tvi);
     }
-    free(lpszItem);
     return hPrev;
 }
 
