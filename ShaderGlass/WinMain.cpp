@@ -24,7 +24,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 
     if(!HasCaptureAPI() && !HasCaptureLib())
     {
-        MessageBox(NULL, L"No Capture API not present! Only file input will be possible.", L"ShaderGlass", MB_OK | MB_ICONERROR);
+        MessageBox(NULL, L"当前系统不支持屏幕捕获，仅可使用文件输入。", L"ShaderGlass", MB_OK | MB_ICONERROR);
     }
 
     SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);

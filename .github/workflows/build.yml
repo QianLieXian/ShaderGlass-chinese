@@ -19,10 +19,27 @@ jobs:
         uses: microsoft/setup-msbuild@v2
 
       - name: Build Windows x64
-        run: msbuild ShaderGlass.sln /m /p:Configuration=Release /p:Platform=x64
+        run: |
+          msbuild ShaderGlass.sln /m /p:Configuration=Release /p:Platform=x64 /fl "/flp:logfile=build-errors.log;errorsonly"
+          $result = $LASTEXITCODE
+          if ($result -ne 0 -and (Test-Path build-errors.log)) {
+            Select-String -Path build-errors.log -Pattern 'error [A-Z0-9]+:' | Select-Object -First 12 | ForEach-Object {
+              Write-Output "::error::$($_.Line.Replace('%', '%25'))"
+            }
+          }
+          exit $result
 
       - name: Verify Chinese UI
-        run: python -X utf8 .github/scripts/check-chinese-ui.py x64/Release/ShaderGlass.exe
+        timeout-minutes: 2
+        run: |
+          python -X utf8 .github/scripts/check-chinese-ui.py x64/Release/ShaderGlass.exe 2>&1 | Tee-Object ui-check.log
+          $result = $LASTEXITCODE
+          if ($result -ne 0) {
+            Get-Content ui-check.log | Select-Object -Last 8 | ForEach-Object {
+              Write-Output "::error::$($_.Replace('%', '%25'))"
+            }
+          }
+          exit $result
 
       - name: Upload executable
         uses: actions/upload-artifact@v4
