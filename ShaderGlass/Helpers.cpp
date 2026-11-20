@@ -22,6 +22,19 @@ wchar_t* convertCharArrayToLPCWSTR(const char* charArray)
     return wString;
 }
 
+std::wstring Utf8ToWide(const std::string& text)
+{
+    if(text.empty())
+        return {};
+
+    const int size = static_cast<int>(text.size());
+    const int count = MultiByteToWideChar(CP_UTF8, 0, text.data(), size, nullptr, 0);
+    std::wstring result(count, L'\0');
+    if(count)
+        MultiByteToWideChar(CP_UTF8, 0, text.data(), size, result.data(), count);
+    return result;
+}
+
 // See http://blogs.msdn.com/b/oldnewthing/archive/2007/10/08/5351207.aspx
 BOOL IsAltTabWindow(HWND hwnd)
 {

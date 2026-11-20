@@ -11,7 +11,7 @@ GNU General Public License v3.0
 #include "BrowserWindow.h"
 
 constexpr int WINDOW_WIDTH  = 450;
-constexpr int WINDOW_HEIGHT = 723;
+constexpr int WINDOW_HEIGHT = 743;
 constexpr int CX_BITMAP     = 24;
 constexpr int CY_BITMAP     = 24;
 constexpr int NUM_BITMAPS   = 3;
@@ -944,6 +944,19 @@ LRESULT CALLBACK BrowserWindow::WndProc(HWND hWnd, UINT message, WPARAM wParam, 
             }
             return 0;
         };
+        case IDM_UPDATE_PARAMS: {
+            wchar_t paramsCaption[50];
+            std::unordered_set<std::string> params;
+            for(const auto& pt : m_captureManager.Params())
+            {
+                const auto& p = std::get<1>(pt);
+                if(p->maxValue != p->minValue)
+                    params.insert(p->name);
+            }
+            _snwprintf_s(paramsCaption, 50, _T("Parameters (%lu)"), params.size());
+            SetWindowText(m_paramsButton, paramsCaption);
+            return 0;
+        }
         case BN_CLICKED: {
             if(lParam == (LPARAM)m_addFavButton)
             {

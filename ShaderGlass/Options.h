@@ -120,21 +120,21 @@ struct HotkeyInfo
     const wchar_t* accelerator;
 };
 
-static const std::map<UINT, PixelSizeInfo> pixelSizes = {{WM_PIXEL_SIZE(0), PixelSizeInfo(1.0f, 1.0f, L"x1", "1")},
-                                                         {WM_PIXEL_SIZE(1), PixelSizeInfo(2.0f, 2.0f, L"x2", "2")},
-                                                         {WM_PIXEL_SIZE(2), PixelSizeInfo(2.25f, 2.25f, L"x2.25 (480p -> 1080p)", "2.25")},
-                                                         {WM_PIXEL_SIZE(3), PixelSizeInfo(3.0f, 3.0f, L"x3", "3")},
-                                                         {WM_PIXEL_SIZE(4), PixelSizeInfo(4.0f, 4.0f, L"x4", "4")},
-                                                         {WM_PIXEL_SIZE(5), PixelSizeInfo(4.5f, 4.5f, L"x4.5 (240p -> 1080p)", "4.5")},
-                                                         {WM_PIXEL_SIZE(6), PixelSizeInfo(5.0f, 5.0f, L"x5", "5")},
-                                                         {WM_PIXEL_SIZE(7), PixelSizeInfo(5.4f, 5.4f, L"x5.4 (200p -> 1080p)", "5.4")},
-                                                         {WM_PIXEL_SIZE(8), PixelSizeInfo(6.0f, 6.0f, L"x6 (240p -> 1440p)", "6")},
-                                                         {WM_PIXEL_SIZE(9), PixelSizeInfo(7.0f, 7.0f, L"x7", "7")},
-                                                         {WM_PIXEL_SIZE(10), PixelSizeInfo(7.2f, 7.2f, L"x7.2 (200p -> 1440p)", "7.2")},
-                                                         {WM_PIXEL_SIZE(11), PixelSizeInfo(8.0f, 8.0f, L"x8", "8")},
-                                                         {WM_PIXEL_SIZE(12), PixelSizeInfo(9.0f, 9.0f, L"x9 (240p -> 4K)", "9")},
-                                                         {WM_PIXEL_SIZE(13), PixelSizeInfo(10.0f, 10.0f, L"x10", "10")},
-                                                         {WM_PIXEL_SIZE(14), PixelSizeInfo(10.8f, 10.8f, L"x10.8 (200p -> 4K)", "10.8")}};
+static const std::map<UINT, PixelSizeInfo> pixelSizes = {{WM_PIXEL_SIZE(0), PixelSizeInfo(1.0f, 1.0f, L"×1", "1")},
+                                                         {WM_PIXEL_SIZE(1), PixelSizeInfo(2.0f, 2.0f, L"×2", "2")},
+                                                         {WM_PIXEL_SIZE(2), PixelSizeInfo(2.25f, 2.25f, L"×2.25 (480p → 1080p)", "2.25")},
+                                                         {WM_PIXEL_SIZE(3), PixelSizeInfo(3.0f, 3.0f, L"×3", "3")},
+                                                         {WM_PIXEL_SIZE(4), PixelSizeInfo(4.0f, 4.0f, L"×4", "4")},
+                                                         {WM_PIXEL_SIZE(5), PixelSizeInfo(4.5f, 4.5f, L"×4.5 (240p → 1080p)", "4.5")},
+                                                         {WM_PIXEL_SIZE(6), PixelSizeInfo(5.0f, 5.0f, L"×5", "5")},
+                                                         {WM_PIXEL_SIZE(7), PixelSizeInfo(5.4f, 5.4f, L"×5.4 (200p → 1080p)", "5.4")},
+                                                         {WM_PIXEL_SIZE(8), PixelSizeInfo(6.0f, 6.0f, L"×6 (240p → 1440p)", "6")},
+                                                         {WM_PIXEL_SIZE(9), PixelSizeInfo(7.0f, 7.0f, L"×7", "7")},
+                                                         {WM_PIXEL_SIZE(10), PixelSizeInfo(7.2f, 7.2f, L"×7.2 (200p → 1440p)", "7.2")},
+                                                         {WM_PIXEL_SIZE(11), PixelSizeInfo(8.0f, 8.0f, L"×8", "8")},
+                                                         {WM_PIXEL_SIZE(12), PixelSizeInfo(9.0f, 9.0f, L"×9 (240p → 4K)", "9")},
+                                                         {WM_PIXEL_SIZE(13), PixelSizeInfo(10.0f, 10.0f, L"×10", "10")},
+                                                         {WM_PIXEL_SIZE(14), PixelSizeInfo(10.8f, 10.8f, L"×10.8 (200p → 4K)", "10.8")}};
 
 static std::map<UINT, AspectRatioInfo> aspectRatios = {
     {WM_ASPECT_RATIO(0), AspectRatioInfo(1.0f, L"None", "1")},
@@ -145,6 +145,7 @@ static std::map<UINT, AspectRatioInfo> aspectRatios = {
     {WM_ASPECT_RATIO(5), AspectRatioInfo(0.5f, L"x0.5 (double wide)", "0.5")},
     {WM_ASPECT_RATIO(6), AspectRatioInfo(2.0f, L"x2.0 (double tall)", "2.0")},
     {WM_ASPECT_RATIO(7), AspectRatioInfo(1.0f, L"Custom", CUSTOM_MNEMONIC)},
+    {WM_ASPECT_RATIO(8), AspectRatioInfo(0.0f, L"Stretch", "0")},
 };
 
 static const std::map<UINT, FrameSkipInfo> frameSkips = {{WM_FRAME_SKIP(0), FrameSkipInfo(0, L"100% (VSync)", "1")},
@@ -175,7 +176,10 @@ static const std::map<UINT, OutputScaleInfo> outputScales = {{WM_OUTPUT_SCALE(0)
                                                              {WM_OUTPUT_SCALE(9), OutputScaleInfo(7.0f, L"700%", "700")},
                                                              {WM_OUTPUT_SCALE(10), OutputScaleInfo(8.0f, L"800%", "800")},
                                                              {WM_OUTPUT_SCALE(11), OutputScaleInfo(9.0f, L"900%", "900")},
-                                                             {WM_OUTPUT_SCALE(12), OutputScaleInfo(10.0f, L"1000%", "1000")}};
+                                                             {WM_OUTPUT_SCALE(12), OutputScaleInfo(10.0f, L"1000%", "1000")},
+                                                             {WM_OUTPUT_SCALE(13), OutputScaleInfo(0.75f, L"75%", "75")},
+                                                             {WM_OUTPUT_SCALE(14), OutputScaleInfo(0.5f, L"50%", "50")},
+                                                             {WM_OUTPUT_SCALE(15), OutputScaleInfo(0.25f, L"25%", "25")}};
 
 static const char* defaultPreset     = "newpixie-crt";
 static const char* favoritePresets[] = {"bayer_4x4",
@@ -187,6 +191,7 @@ static const char* favoritePresets[] = {"bayer_4x4",
                                         "fxaa",
                                         "gb-pocket",
                                         "gtu-v050",
+                                        "image-adjustment",
                                         "kawase_glow",
                                         "MegaBezel_STD",
                                         "MMJ_Cel_Shader",

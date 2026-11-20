@@ -30,13 +30,14 @@
 
 ### 下载
 
-最新稳定版 (v1.3.0, 2026年3月19日)：
+上游最新稳定版（v1.3.2，2026年11月1日）：
 * Linux/Wine 下的桌面/窗口捕获
 * 着色器搜索功能
 * 着色器库更新
+* 用于自动化的新命令行参数
 * 小幅改进
 
-[https://github.com/mausimus/ShaderGlass/releases/download/v1.3.0/ShaderGlass-1.3.0.win-x64.zip](https://github.com/mausimus/ShaderGlass/releases/download/v1.3.0/ShaderGlass-1.3.0-win-x64.zip)
+[https://github.com/mausimus/ShaderGlass/releases/download/v1.3.2/ShaderGlass-1.3.2-win-x64.zip](https://github.com/mausimus/ShaderGlass/releases/download/v1.3.0/ShaderGlass-1.3.0-win-x64.zip)
 
 [测试版和旧版本可在此获取](https://github.com/mausimus/ShaderGlass/releases)
 

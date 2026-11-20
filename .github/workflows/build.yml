@@ -12,8 +12,6 @@ jobs:
         platform: [x64]
 
     steps:    
-    - run: Get-PSDrive
-
     - uses: actions/checkout@v4
 
     - name: Add MSBuild to PATH
@@ -28,4 +26,5 @@ jobs:
       with:
         name: 'ShaderGlass_${{ matrix.platform }}_${{ matrix.configuration }}'
         path: '.\${{ matrix.platform }}\${{ matrix.configuration }}\ShaderGlass.exe'
+        if-no-files-found: error
         overwrite: true

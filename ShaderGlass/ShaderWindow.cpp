@@ -20,7 +20,7 @@ ShaderWindow::ShaderWindow(CaptureManager& captureManager) :
     m_captureManager(captureManager), m_captureOptions(captureManager.m_options), m_title(), m_windowClass(), m_toggledNone(false)
 { }
 
-bool ShaderWindow::LoadProfile(const std::wstring& fileName, bool forceStart)
+bool ShaderWindow::LoadProfile(const std::wstring& fileName, bool forceStart, const std::wstring& overrideInput)
 {
     try
     {
@@ -50,6 +50,8 @@ bool ShaderWindow::LoadProfile(const std::wstring& fileName, bool forceStart)
         std::optional<bool>                               clone;
         std::vector<std::tuple<int, std::string, double>> params;
         bool                                              isImport = false;
+        if(overrideInput.size())
+            windowName = overrideInput;
         while(!infile.eof())
         {
             std::string key;
@@ -61,23 +63,23 @@ bool ShaderWindow::LoadProfile(const std::wstring& fileName, bool forceStart)
                 if(!value.starts_with("1."))
                     return true;
             }
-            else if(key == "CaptureWindow")
+            else if(key == "CaptureWindow" && !overrideInput.size())
             {
                 wchar_t wideName[MAX_WINDOW_TITLE];
                 MultiByteToWideChar(CP_UTF8, 0, value.c_str(), -1, wideName, MAX_WINDOW_TITLE);
                 windowName = std::wstring(wideName);
             }
-            else if(key == "CaptureDevice")
+            else if(key == "CaptureDevice" && !overrideInput.size())
             {
                 wchar_t wideName[MAX_DEVICE_NAME];
                 MultiByteToWideChar(CP_UTF8, 0, value.c_str(), -1, wideName, MAX_DEVICE_NAME);
                 deviceName = std::wstring(wideName);
             }
-            else if(key == "CaptureFormat")
+            else if(key == "CaptureFormat" && !overrideInput.size())
             {
                 deviceFormat = value;
             }
-            else if(key == "CaptureDesktop")
+            else if(key == "CaptureDesktop" && !overrideInput.size())
             {
                 desktopName = value;
             }
@@ -120,7 +122,16 @@ bool ShaderWindow::LoadProfile(const std::wstring& fileName, bool forceStart)
                     {
                         float customValue = std::stof(value);
                         if(customValue != 0 && !std::isnan(customValue))
-                            SendMessage(m_mainWindow, WM_COMMAND, aspectRatios.rbegin()->first, (LPARAM)(customValue * CUSTOM_PARAM_SCALE));
+                        {
+                            for(const auto& p : aspectRatios)
+                            {
+                                if(p.second.mnemonic == CUSTOM_MNEMONIC)
+                                {
+                                    SendMessage(m_mainWindow, WM_COMMAND, p.first, (LPARAM)(customValue * CUSTOM_PARAM_SCALE));
+                                    break;
+                                }
+                            }
+                        }
                     }
                     catch(std::exception&)
                     {
@@ -285,15 +296,7 @@ bool ShaderWindow::LoadProfile(const std::wstring& fileName, bool forceStart)
         }
         else if(windowName.has_value() && windowName.value().size())
         {
-            ScanWindows();
-            for(unsigned i = 0; i < m_captureWindows.size(); i++)
-            {
-                if(m_captureWindows.at(i).name == windowName.value())
-                {
-                    SendMessage(m_mainWindow, WM_COMMAND, WM_CAPTURE_WINDOW(i), 0);
-                    break;
-                }
-            }
+            SetCaptureWindow(windowName.value());
         }
         else if(desktopName.has_value() && desktopName.value().size())
         {
@@ -355,6 +358,33 @@ bool ShaderWindow::LoadProfile(const std::wstring& fileName, bool forceStart)
     }
 
     return true;
+}
+
+void ShaderWindow::SetCaptureWindow(const std::wstring& name)
+{
+    ScanWindows();
+    bool found = false;
+    for(unsigned i = 0; i < m_captureWindows.size(); i++)
+    {
+        if(m_captureWindows.at(i).name == name)
+        {
+            SendMessage(m_mainWindow, WM_COMMAND, WM_CAPTURE_WINDOW(i), 0);
+            found = true;
+            break;
+        }
+    }
+    if(!found)
+    {
+        // try prefix match if exact match not found
+        for(unsigned i = 0; i < m_captureWindows.size(); i++)
+        {
+            if(m_captureWindows.at(i).name.starts_with(name))
+            {
+                SendMessage(m_mainWindow, WM_COMMAND, WM_CAPTURE_WINDOW(i), 0);
+                break;
+            }
+        }
+    }
 }
 
 void ShaderWindow::StartDialog()
@@ -723,9 +753,10 @@ BOOL CALLBACK ShaderWindow::EnumDisplayMonitorsProc(_In_ HMONITOR hMonitor, _In_
     if(m_captureDisplays.size() >= MAX_CAPTURE_DISPLAYS)
         return false;
 
-    MONITORINFOEX info;
+    MONITORINFOEXW info = {};
     info.cbSize = sizeof(info);
-    GetMonitorInfo(hMonitor, &info);
+    if(!GetMonitorInfoW(hMonitor, &info))
+        return TRUE;
 
     char utfName[MAX_WINDOW_TITLE];
     WideCharToMultiByte(CP_UTF8, 0, info.szDevice, -1, utfName, MAX_WINDOW_TITLE, NULL, NULL);
@@ -871,7 +902,14 @@ void ShaderWindow::ScanDisplays()
     UINT i = 0;
     for(const auto& w : m_captureDisplays)
     {
-        InsertMenu(m_displayMenu, 2, MF_STRING, WM_CAPTURE_DISPLAY(i++), convertCharArrayToLPCWSTR(w.name.c_str()));
+        auto label = Utf8ToWide(w.name);
+        if(w.name == "All Displays")
+            label = L"所有显示器";
+        else if(w.name == "Current Display")
+            label = L"当前显示器";
+        else if(w.name == "Choose...")
+            label = L"选择桌面或窗口…";
+        AppendMenuW(m_displayMenu, MF_STRING, WM_CAPTURE_DISPLAY(i++), label.c_str());
         if(m_captureOptions.monitor == w.monitor)
             CheckMenuItem(m_displayMenu, WM_CAPTURE_DISPLAY(i - 1), MF_CHECKED | MF_BYCOMMAND);
     }
@@ -886,22 +924,22 @@ void ShaderWindow::CropWindow()
 
 void ShaderWindow::BuildProgramMenu()
 {
-    m_frameSkipMenu = GetSubMenu(m_programMenu, 9);
+    m_frameSkipMenu = GetSubMenu(m_programMenu, 10);
     for(const auto& fs : frameSkips)
     {
         AppendMenu(m_frameSkipMenu, MF_STRING, fs.first, fs.second.text);
     }
 
     m_recentMenu = CreatePopupMenu();
-    InsertMenu(m_programMenu, 14, MF_BYPOSITION | MF_STRING | MF_POPUP, (UINT_PTR)m_recentMenu, L"Recent profiles");
+    InsertMenu(m_programMenu, 15, MF_BYPOSITION | MF_STRING | MF_POPUP, (UINT_PTR)m_recentMenu, L"最近使用的配置");
     LoadRecentProfiles();
 
     m_hotkeysMenu  = GetSubMenu(m_programMenu, 3);
-    m_gpuMenu      = GetSubMenu(m_programMenu, 7);
-    m_advancedMenu = GetSubMenu(m_programMenu, 10);
+    m_gpuMenu      = GetSubMenu(m_programMenu, 8);
+    m_advancedMenu = GetSubMenu(m_programMenu, 11);
     if(!HasCaptureAPI())
     {
-        EnableMenuItem(m_programMenu, 10, MF_BYPOSITION | MF_DISABLED | MF_GRAYED);
+        EnableMenuItem(m_programMenu, 11, MF_BYPOSITION | MF_DISABLED | MF_GRAYED);
     }
 }
 
@@ -912,14 +950,13 @@ void ShaderWindow::BuildInputMenu()
     RemoveMenu(GetSubMenu(m_inputMenu, 0), ID_DESKTOP_DUMMY, MF_BYCOMMAND);
 
     m_pixelSizeMenu = CreatePopupMenu();
-    AppendMenu(m_pixelSizeMenu, MF_STRING, IDM_PIXELSIZE_NEXT, L"Next\tp");
-    AppendMenu(m_pixelSizeMenu, MF_STRING, IDM_PIXELSIZE_PREV, L"Previous\to");
+    AppendMenu(m_pixelSizeMenu, MF_STRING, IDM_PIXELSIZE_NEXT, L"下一个\tp");
+    AppendMenu(m_pixelSizeMenu, MF_STRING, IDM_PIXELSIZE_PREV, L"上一个\to");
 
     auto systemDpi = GetDpiForSystem();
-    char dpiMenu[100];
     m_dpiScale = GetDpiForSystem() / (float)USER_DEFAULT_SCREEN_DPI;
-    snprintf(dpiMenu, 100, "Adjust for DPI Scale (%d%%)", static_cast<int>(100.0f * m_dpiScale));
-    AppendMenu(m_pixelSizeMenu, MF_STRING, IDM_PIXELSIZE_DPI, convertCharArrayToLPCWSTR(dpiMenu));
+    const auto dpiMenu = L"按 DPI 缩放调整（" + std::to_wstring(static_cast<int>(100.0f * m_dpiScale)) + L"%）";
+    AppendMenuW(m_pixelSizeMenu, MF_STRING, IDM_PIXELSIZE_DPI, dpiMenu.c_str());
     if(systemDpi == USER_DEFAULT_SCREEN_DPI)
     {
         // no scaling can be applied
@@ -930,7 +967,7 @@ void ShaderWindow::BuildInputMenu()
     {
         AppendMenu(m_pixelSizeMenu, MF_STRING, px.first, px.second.text);
     }
-    InsertMenu(m_inputMenu, 5, MF_BYPOSITION | MF_STRING | MF_POPUP, (UINT_PTR)m_pixelSizeMenu, L"Pixel Size");
+    InsertMenu(m_inputMenu, 5, MF_BYPOSITION | MF_STRING | MF_POPUP, (UINT_PTR)m_pixelSizeMenu, L"像素大小");
 
     m_displayMenu = GetSubMenu(m_inputMenu, 0);
     m_windowMenu  = GetSubMenu(m_inputMenu, 1);
@@ -948,24 +985,24 @@ void ShaderWindow::BuildOutputMenu()
     m_flipMenu         = GetSubMenu(m_outputMenu, 2);
 
     m_outputScaleMenu = CreatePopupMenu();
-    AppendMenu(m_outputScaleMenu, MF_STRING, IDM_OUTPUT_FREESCALE, L"Free");
+    AppendMenu(m_outputScaleMenu, MF_STRING, IDM_OUTPUT_FREESCALE, L"自由缩放");
     for(const auto& os : outputScales)
     {
         AppendMenu(m_outputScaleMenu, MF_STRING, os.first, os.second.text);
     }
-    AppendMenu(m_outputScaleMenu, MF_STRING, IDM_OUTPUT_LOCKSCALE, L"Retain");
-    InsertMenu(m_outputMenu, 3, MF_BYPOSITION | MF_STRING | MF_POPUP, (UINT_PTR)m_outputScaleMenu, L"Scale");
+    AppendMenu(m_outputScaleMenu, MF_STRING, IDM_OUTPUT_LOCKSCALE, L"保持缩放比例");
+    InsertMenu(m_outputMenu, 3, MF_BYPOSITION | MF_STRING | MF_POPUP, (UINT_PTR)m_outputScaleMenu, L"缩放");
 
     m_aspectRatioMenu = CreatePopupMenu();
     for(const auto& ar : aspectRatios)
     {
         AppendMenu(m_aspectRatioMenu, MF_STRING, ar.first, ar.second.text);
     }
-    InsertMenu(m_outputMenu, 4, MF_BYPOSITION | MF_STRING | MF_POPUP, (UINT_PTR)m_aspectRatioMenu, L"Aspect Ratio Correction");
+    InsertMenu(m_outputMenu, 4, MF_BYPOSITION | MF_STRING | MF_POPUP, (UINT_PTR)m_aspectRatioMenu, L"宽高比校正");
 
     m_orientationMenu = GetSubMenu(m_outputMenu, 5);
 
-    InsertMenu(m_outputMenu, 6, MF_BYPOSITION | MF_STRING, ID_PROCESSING_FULLSCREEN, L"Fullscreen\tCtrl+Shift+G");
+    InsertMenu(m_outputMenu, 6, MF_BYPOSITION | MF_STRING, ID_PROCESSING_FULLSCREEN, L"全屏\tCtrl+Shift+G");
 }
 
 void ShaderWindow::BuildShaderMenu()
@@ -976,7 +1013,7 @@ void ShaderWindow::BuildShaderMenu()
         throw std::runtime_error("Too many shaders!");
 
     m_importsMenu = CreatePopupMenu();
-    InsertMenu(m_shaderMenu, 7, MF_BYPOSITION | MF_STRING | MF_POPUP, (UINT_PTR)m_importsMenu, L"Recent imports");
+    InsertMenu(m_shaderMenu, 7, MF_BYPOSITION | MF_STRING | MF_POPUP, (UINT_PTR)m_importsMenu, L"最近导入");
     LoadRecentImports();
 }
 
@@ -1025,6 +1062,28 @@ ATOM ShaderWindow::MyRegisterClass(HINSTANCE hInstance)
     //wcex.hCursor = NULL;
 
     return RegisterClassExW(&wcex);
+}
+
+bool ShaderWindow::GetKeepAwakeState()
+{
+    return GetRegistryOption(L"Keep Awake", false);
+}
+
+void ShaderWindow::SetKeepAwakeState(bool state)
+{
+    SaveRegistryOption(L"Keep Awake", state);
+}
+
+void ShaderWindow::EnableKeepAwake(bool state)
+{
+    if(state)
+    {
+        SetThreadExecutionState(ES_CONTINUOUS | ES_DISPLAY_REQUIRED | ES_SYSTEM_REQUIRED);
+    }
+    else
+    {
+        SetThreadExecutionState(ES_CONTINUOUS);
+    }
 }
 
 bool ShaderWindow::GetStartingPositionState()
@@ -1384,6 +1443,7 @@ LRESULT CALLBACK ShaderWindow::WndProc(HWND hWnd, UINT message, WPARAM wParam, L
             break;
         case IDM_UPDATE_PARAMS:
             PostMessage(m_paramsWindow, WM_COMMAND, IDM_UPDATE_PARAMS, 0);
+            PostMessage(m_browserWindow, WM_COMMAND, IDM_UPDATE_PARAMS, 0);
             break;
         case ID_SHADER_BROWSE: {
             if(!m_browserPositioned)
@@ -1474,6 +1534,20 @@ LRESULT CALLBACK ShaderWindow::WndProc(HWND hWnd, UINT message, WPARAM wParam, L
             {
                 SaveStartingPositionState(true);
                 CheckMenuItem(m_programMenu, ID_PROCESSING_REMEMBERPOSITION, MF_CHECKED);
+            }
+            break;
+        case ID_PROCESSING_KEEPAWAKE:
+            if(GetMenuState(m_programMenu, ID_PROCESSING_KEEPAWAKE, MF_BYCOMMAND) & MF_CHECKED)
+            {
+                SetKeepAwakeState(false);
+                EnableKeepAwake(false);
+                CheckMenuItem(m_programMenu, ID_PROCESSING_KEEPAWAKE, MF_UNCHECKED);
+            }
+            else
+            {
+                SetKeepAwakeState(true);
+                EnableKeepAwake(true);
+                CheckMenuItem(m_programMenu, ID_PROCESSING_KEEPAWAKE, MF_CHECKED);
             }
             break;
         case ID_PRESENTATION_USEFLIPMODE:
@@ -1960,6 +2034,12 @@ LRESULT CALLBACK ShaderWindow::WndProc(HWND hWnd, UINT message, WPARAM wParam, L
                     CheckMenuItem(m_outputScaleMenu, IDM_OUTPUT_FREESCALE, MF_UNCHECKED | MF_BYCOMMAND);
                     m_captureOptions.outputScale = outputScale->second.s;
                     m_captureOptions.freeScale   = false;
+                    if(m_captureOptions.aspectRatio == 0)
+                    {
+                        // don't allow stretch if we have scale set
+                        m_captureOptions.aspectRatio = 1;
+                        CheckMenuRadioItem(m_aspectRatioMenu, 0, static_cast<UINT>(aspectRatios.size()), 0, MF_BYPOSITION);
+                    }
                     m_captureManager.UpdateOutputSize();
                     UpdateWindowState();
                     break;
@@ -1989,6 +2069,13 @@ LRESULT CALLBACK ShaderWindow::WndProc(HWND hWnd, UINT message, WPARAM wParam, L
                     m_selectedAspectRatio = wmId - WM_ASPECT_RATIO(0);
                     CheckMenuRadioItem(m_aspectRatioMenu, 0, static_cast<UINT>(aspectRatios.size()), wmId - WM_ASPECT_RATIO(0), MF_BYPOSITION);
                     m_captureOptions.aspectRatio = aspectRatio->second.r;
+                    if(m_captureOptions.aspectRatio == 0)
+                    {
+                        // use freescale if we want stretch
+                        CheckMenuRadioItem(m_outputScaleMenu, WM_OUTPUT_SCALE(0), WM_OUTPUT_SCALE(static_cast<UINT>(outputScales.size() - 1)), 0, MF_BYCOMMAND);
+                        CheckMenuItem(m_outputScaleMenu, IDM_OUTPUT_FREESCALE, MF_CHECKED | MF_BYCOMMAND);
+                        m_captureOptions.freeScale = true;
+                    }
                     m_captureManager.UpdateOutputSize();
                     UpdateWindowState();
                     break;
@@ -2243,6 +2330,7 @@ LRESULT CALLBACK ShaderWindow::WndProc(HWND hWnd, UINT message, WPARAM wParam, L
             return 0;
         case TIMER_TITLE:
             UpdateTitle();
+            CheckAutoClose();
             return 0;
         }
         break;
@@ -2255,6 +2343,14 @@ LRESULT CALLBACK ShaderWindow::WndProc(HWND hWnd, UINT message, WPARAM wParam, L
         return DefWindowProc(hWnd, message, wParam, lParam);
     }
     return 0;
+}
+
+void ShaderWindow::CheckAutoClose()
+{
+    if(m_captureOptions.autoClose && m_captureOptions.captureWindow && m_captureManager.IsActive() && !IsWindow(m_captureOptions.captureWindow))
+    {
+        PostMessage(m_mainWindow, WM_COMMAND, IDM_EXIT, 0);
+    }
 }
 
 bool ShaderWindow::Start()
@@ -2292,6 +2388,7 @@ void ShaderWindow::Stop()
     EnableMenuItem(m_programMenu, IDM_START, MF_BYCOMMAND | MF_ENABLED);
     UpdateWindowState();
     SendMessage(m_paramsWindow, WM_COMMAND, IDM_UPDATE_PARAMS, 0);
+    SendMessage(m_browserWindow, WM_COMMAND, IDM_UPDATE_PARAMS, 0);
 }
 
 void ShaderWindow::TryUpdateInput()
@@ -2404,17 +2501,17 @@ bool ShaderWindow::Create(_In_ HINSTANCE hInstance, _In_ int nCmdShow)
         if(!HasCaptureLib())
         {
             ModifyMenu(
-                m_helpMenu, ID_HELP_WINDOWSVERSION, MF_BYCOMMAND | MF_STRING | MF_DISABLED | MF_GRAYED, ID_HELP_WINDOWSVERSION, L"No Capture API! Only file input is possible.");
+                m_helpMenu, ID_HELP_WINDOWSVERSION, MF_BYCOMMAND | MF_STRING | MF_DISABLED | MF_GRAYED, ID_HELP_WINDOWSVERSION, L"无法使用捕获 API，仅支持文件输入。");
             EnableMenuItem(m_inputMenu, 0, MF_BYPOSITION | MF_DISABLED | MF_GRAYED);
             EnableMenuItem(m_inputMenu, 1, MF_BYPOSITION | MF_DISABLED | MF_GRAYED);
             EnableMenuItem(m_modeMenu, IDM_MODE_CLONE, MF_DISABLED | MF_BYCOMMAND | MF_GRAYED);
         }
         else
         {
-            ModifyMenu(m_inputMenu, 0, MF_BYPOSITION | MF_DISABLED | MF_GRAYED | MF_SEPARATOR, 0, L"Not supported");
-            ModifyMenu(m_inputMenu, 1, MF_BYPOSITION, 1, L"Desktop/Window");
+            ModifyMenu(m_inputMenu, 0, MF_BYPOSITION | MF_DISABLED | MF_GRAYED | MF_SEPARATOR, 0, L"不支持");
+            ModifyMenu(m_inputMenu, 1, MF_BYPOSITION, 1, L"桌面/窗口");
             ModifyMenu(
-                m_helpMenu, ID_HELP_WINDOWSVERSION, MF_BYCOMMAND | MF_STRING | MF_DISABLED | MF_GRAYED, ID_HELP_WINDOWSVERSION, L"Non-Windows API - Glass mode not supported.");
+                m_helpMenu, ID_HELP_WINDOWSVERSION, MF_BYCOMMAND | MF_STRING | MF_DISABLED | MF_GRAYED, ID_HELP_WINDOWSVERSION, L"当前捕获接口不支持玻璃覆盖模式。");
         }
         EnableMenuItem(m_inputMenu, IDM_INPUT_CAPTURECURSOR, MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
         EnableMenuItem(m_modeMenu, IDM_MODE_GLASS, MF_DISABLED | MF_BYCOMMAND | MF_GRAYED);
@@ -2425,14 +2522,14 @@ bool ShaderWindow::Create(_In_ HINSTANCE hInstance, _In_ int nCmdShow)
                    ID_HELP_WINDOWSVERSION,
                    MF_BYCOMMAND | MF_STRING | MF_DISABLED | MF_GRAYED,
                    ID_HELP_WINDOWSVERSION,
-                   L"Limited functionality, update to Windows 10 May 2020 Update (2004)!");
+                   L"功能受限，请更新至 Windows 10 2004 或更高版本。");
     }
 
     if(CanDisableBorder())
     {
         CheckMenuItem(m_inputMenu, IDM_INPUT_REMOVEBORDER, MF_CHECKED | MF_BYCOMMAND);
 
-        ModifyMenu(m_helpMenu, ID_HELP_WINDOWSVERSION, MF_BYCOMMAND | MF_STRING | MF_DISABLED | MF_GRAYED, ID_HELP_WINDOWSVERSION, L"Excellent functionality, Windows 11");
+        ModifyMenu(m_helpMenu, ID_HELP_WINDOWSVERSION, MF_BYCOMMAND | MF_STRING | MF_DISABLED | MF_GRAYED, ID_HELP_WINDOWSVERSION, L"Windows 11，支持全部捕获功能。");
     }
 
     SetMenu(m_mainWindow, m_mainMenu);
@@ -2471,6 +2568,11 @@ bool ShaderWindow::Create(_In_ HINSTANCE hInstance, _In_ int nCmdShow)
     if(GetStartingPositionState())
     {
         CheckMenuItem(m_programMenu, ID_PROCESSING_REMEMBERPOSITION, MF_BYCOMMAND | MF_CHECKED);
+    }
+    if(GetKeepAwakeState())
+    {
+        CheckMenuItem(m_programMenu, ID_PROCESSING_KEEPAWAKE, MF_BYCOMMAND | MF_CHECKED);
+        EnableKeepAwake(true);
     }
     if(RememberFPS())
     {
@@ -3004,9 +3106,11 @@ void ShaderWindow::Start(_In_ LPWSTR lpCmdLine, HWND paramsWindow, HWND browserW
 
     if(lpCmdLine)
     {
-        int  numArgs;
-        auto cmdLine = GetCommandLineW();
-        auto args    = CommandLineToArgvW(cmdLine, &numArgs);
+        int          numArgs;
+        auto         cmdLine = GetCommandLineW();
+        auto         args    = CommandLineToArgvW(cmdLine, &numArgs);
+        std::wstring overrideInput;
+        bool         hasProfile = false;
 
         for(int a = 1; a < numArgs; a++)
         {
@@ -3018,12 +3122,100 @@ void ShaderWindow::Start(_In_ LPWSTR lpCmdLine, HWND paramsWindow, HWND browserW
                 CaptureLib::Disable();
             else if(wcscmp(args[a], L"-reset") == 0 || wcscmp(args[a], L"-r") == 0)
                 ForgetStartingPosition();
+            else if(wcscmp(args[a], L"-display") == 0 || wcscmp(args[a], L"-d") == 0)
+            {
+                if(a < numArgs - 1)
+                {
+                    try
+                    {
+                        auto outputDisplayNo = std::stoi(std::wstring(args[++a]));
+
+                        std::vector<RECT> orderedDisplays;
+                        for(const auto& d : m_captureDisplays)
+                        {
+                            if(d.monitor == NULL)
+                                continue;
+
+                            MONITORINFO monitorInfo;
+                            monitorInfo.cbSize = sizeof(monitorInfo);
+                            if(GetMonitorInfo(d.monitor, &monitorInfo))
+                            {
+                                if(outputDisplayNo != 0 || (monitorInfo.dwFlags & MONITORINFOF_PRIMARY) == MONITORINFOF_PRIMARY)
+                                {
+                                    orderedDisplays.push_back(monitorInfo.rcWork);
+                                }
+                            }
+                        }
+
+                        int numDisplays = orderedDisplays.size();
+                        if(numDisplays > 0)
+                        {
+                            RECT monitorRect {0, 0, 0, 0};
+                            if(numDisplays == 1)
+                                monitorRect = *orderedDisplays.begin();
+                            else
+                            {
+                                // sort left to right, top to bottom
+                                std::sort(orderedDisplays.begin(), orderedDisplays.end(), [](const RECT& a, const RECT& b) {
+                                    if(a.left == b.left)
+                                        return a.top < b.top;
+                                    return a.left < b.left;
+                                });
+
+                                if(outputDisplayNo > 0 && outputDisplayNo <= numDisplays)
+                                {
+                                    monitorRect = orderedDisplays[outputDisplayNo - 1];
+                                }
+                                if(outputDisplayNo < 0 && outputDisplayNo >= -numDisplays)
+                                {
+                                    monitorRect = orderedDisplays[numDisplays + outputDisplayNo];
+                                }
+                            }
+
+                            RECT windowRect;
+                            if(monitorRect.right != monitorRect.left && monitorRect.top != monitorRect.bottom && GetWindowRect(m_mainWindow, &windowRect))
+                            {
+                                int windowW  = windowRect.right - windowRect.left;
+                                int windowH  = windowRect.bottom - windowRect.top;
+                                int monitorW = monitorRect.right - monitorRect.left;
+                                int monitorH = monitorRect.bottom - monitorRect.top;
+                                if(windowW > monitorW || windowH > monitorH)
+                                {
+                                    SetWindowPos(
+                                        m_mainWindow, NULL, monitorRect.left, monitorRect.top, min(windowW, monitorW), min(windowH, monitorH), SWP_NOZORDER | SWP_NOACTIVATE);
+                                }
+                                else
+                                {
+                                    SetWindowPos(m_mainWindow, NULL, monitorRect.left, monitorRect.top, 0, 0, SWP_NOZORDER | SWP_NOSIZE | SWP_NOACTIVATE);
+                                }
+                            }
+                        }
+                    }
+                    catch(...)
+                    { }
+                }
+            }
+            else if(wcscmp(args[a], L"-input") == 0 || wcscmp(args[a], L"-i") == 0)
+            {
+                if(a < numArgs - 1)
+                    overrideInput = std::wstring(args[++a]);
+            }
+            else if(wcscmp(args[a], L"-autoclose") == 0 || wcscmp(args[a], L"-ac") == 0)
+                m_captureOptions.autoClose = true;
             else if(a == numArgs - 1)
             {
                 std::wstring ws(args[a]);
                 if(ws.size())
-                    LoadProfile(ws, autoStart);
+                {
+                    LoadProfile(ws, autoStart, overrideInput);
+                    hasProfile = true;
+                }
             }
+        }
+
+        if(overrideInput.size() && !hasProfile)
+        {
+            SetCaptureWindow(overrideInput);
         }
     }
 
@@ -3038,6 +3230,7 @@ void ShaderWindow::Start(_In_ LPWSTR lpCmdLine, HWND paramsWindow, HWND browserW
     {
         SendMessage(m_mainWindow, WM_COMMAND, IDM_START, 0);
         SendMessage(m_paramsWindow, WM_COMMAND, IDM_UPDATE_PARAMS, 0);
+        SendMessage(m_browserWindow, WM_COMMAND, IDM_UPDATE_PARAMS, 0);
     }
     if(fullScreen)
     {

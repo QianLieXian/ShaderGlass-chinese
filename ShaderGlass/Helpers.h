@@ -11,6 +11,7 @@ GNU General Public License v3.0
 #define MAX_DEVICE_NAME 200
 
 wchar_t*     convertCharArrayToLPCWSTR(const char* charArray);
+std::wstring Utf8ToWide(const std::string& text);
 BOOL         IsAltTabWindow(HWND hwnd);
 std::wstring GetWindowStringText(HWND hwnd);
 bool         HasCaptureAPI();

@@ -9,6 +9,7 @@ GNU General Public License v3.0
 
 #include "resource.h"
 #include "ParamsWindow.h"
+#include "ShaderParamLocalization.h"
 
 constexpr int STATIC_WIDTH  = 300;
 constexpr int STATIC_HEIGHT = 40;
@@ -108,7 +109,7 @@ BOOL ParamsWindow::InitInstance(HINSTANCE hInstance, int nCmdShow)
     m_mainWindow = hWnd;
 
     m_resetButtonWnd = CreateWindow(L"BUTTON",
-                                    L"Defaults",
+                                    L"恢复默认",
                                     WS_TABSTOP | WS_VISIBLE | WS_CHILD,
                                     (LONG)(m_dpiScale * ((WINDOW_WIDTH / 3) - (BUTTON_WIDTH / 2))),
                                     (LONG)(m_dpiScale * BUTTON_TOP),
@@ -121,7 +122,7 @@ BOOL ParamsWindow::InitInstance(HINSTANCE hInstance, int nCmdShow)
     SendMessage(m_resetButtonWnd, WM_SETFONT, (LPARAM)m_font, true);
 
     m_closeButtonWnd = CreateWindow(L"BUTTON",
-                                    L"Close",
+                                    L"关闭",
                                     WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
                                     (LONG)(m_dpiScale * ((2 * WINDOW_WIDTH / 3) - (BUTTON_WIDTH / 2))),
                                     (LONG)(m_dpiScale * BUTTON_TOP),
@@ -220,13 +221,13 @@ void ParamsWindow::RebuildControls(bool doResize)
     }
     SendMessage(m_mainWindow, WM_SETREDRAW, FALSE, 0);
 
-    char        title[200];
-    const auto& shader = m_captureManager.Presets().at(m_captureOptions.presetNo);
+    std::wstring title(m_title);
     if(m_captureManager.IsActive())
-        snprintf(title, 200, "Shader Parameters: %s", shader->Name.c_str());
-    else
-        snprintf(title, 200, "Shader Parameters");
-    SetWindowTextA(m_mainWindow, title);
+    {
+        const auto& shader = m_captureManager.Presets().at(m_captureOptions.presetNo);
+        title += L"：" + Utf8ToWide(shader->Name);
+    }
+    SetWindowTextW(m_mainWindow, title.c_str());
 
     m_hwndTip = CreateWindowEx(NULL,
                                TOOLTIPS_CLASS,
@@ -449,13 +450,13 @@ void ParamsWindow::AddTrackbar(UINT iMin, UINT iMax, UINT iStart, UINT iSteps, c
 
     SendMessage(hwndTrack, WM_SETFONT, (LPARAM)m_font, true);
 
-    const char* label   = p->description.size() ? p->description.c_str() : name;
+    const auto label = LocalizeShaderParam(Utf8ToWide(p->description.empty() ? name : p->description));
     const char* tooltip = p->name.c_str();
 
     auto paramNameWnd = CreateWindowEx(0,
                                        L"STATIC",
-                                       convertCharArrayToLPCWSTR(label),
-                                       SS_RIGHT | SS_NOTIFY | WS_CHILD | WS_VISIBLE,
+                                       label.c_str(),
+                                       SS_RIGHT | SS_NOPREFIX | SS_NOTIFY | WS_CHILD | WS_VISIBLE,
                                        2,
                                        0,
                                        (LONG)(m_dpiScale * STATIC_WIDTH - 2),
