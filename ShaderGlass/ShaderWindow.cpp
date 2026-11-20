@@ -33,7 +33,7 @@ bool ShaderWindow::LoadProfile(const std::wstring& fileName, bool forceStart, co
         std::ifstream infile(fileName);
         if(!infile.good())
         {
-            auto message = std::wstring(TEXT("Unable to find profile ")) + fileName;
+            auto message = std::wstring(TEXT("找不到配置文件：")) + fileName;
             MessageBox(NULL, message.data(), L"ShaderGlass", MB_OK | MB_ICONERROR);
 
             return false;
@@ -354,7 +354,7 @@ bool ShaderWindow::LoadProfile(const std::wstring& fileName, bool forceStart, co
     }
     catch(std::exception& e)
     {
-        MessageBox(NULL, convertCharArrayToLPCWSTR((std::string("Error loading profile: ") + std::string(e.what())).c_str()), L"ShaderGlass", MB_OK | MB_ICONERROR);
+        MessageBox(NULL, (L"加载配置失败：" + Utf8ToWide(e.what())).c_str(), L"ShaderGlass", MB_OK | MB_ICONERROR);
     }
 
     return true;
@@ -406,7 +406,7 @@ void ShaderWindow::LoadProfile()
     ZeroMemory(&ofn, sizeof(ofn));
     ofn.lStructSize = sizeof(ofn);
     ofn.hwndOwner   = NULL;
-    ofn.lpstrFilter = (LPCWSTR)L"ShaderGlass Profiles (*.sgp)\0*.sgp\0All Files (*.*)\0*.*\0";
+    ofn.lpstrFilter = (LPCWSTR)L"ShaderGlass 配置 (*.sgp)\0*.sgp\0所有文件 (*.*)\0*.*\0";
     ofn.lpstrFile   = (LPWSTR)szFileName;
     ofn.nMaxFile    = MAX_PATH;
     ofn.Flags       = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY;
@@ -429,7 +429,7 @@ void ShaderWindow::ImportShader()
     ofn.lStructSize = sizeof(ofn);
     ofn.hwndOwner   = NULL;
     ofn.lpstrFilter =
-        (LPCWSTR)L"Slang Profiles or Shaders (*.slangp;*.slang)\0*.slangp;*.slang\0Slang Profiles (*.slangp)\0*.slangp\0Slang Shaders (*.slang)\0*.slang\0All Files (*.*)\0*.*\0";
+        (LPCWSTR)L"Slang 预设或着色器 (*.slangp;*.slang)\0*.slangp;*.slang\0Slang 预设 (*.slangp)\0*.slangp\0Slang 着色器 (*.slang)\0*.slang\0所有文件 (*.*)\0*.*\0";
     ofn.lpstrFile   = (LPWSTR)szFileName;
     ofn.nMaxFile    = MAX_PATH;
     ofn.Flags       = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY;
@@ -462,7 +462,7 @@ void ShaderWindow::LoadInputImage()
     ZeroMemory(&ofn, sizeof(ofn));
     ofn.lStructSize = sizeof(ofn);
     ofn.hwndOwner   = NULL;
-    ofn.lpstrFilter = (LPCWSTR)L"Images (*.png;*.jpg,*.gif)\0*.png;*.jpg;*.gif\0All Files (*.*)\0*.*\0";
+    ofn.lpstrFilter = (LPCWSTR)L"图像 (*.png;*.jpg;*.gif)\0*.png;*.jpg;*.gif\0所有文件 (*.*)\0*.*\0";
     ofn.lpstrFile   = (LPWSTR)szFileName;
     ofn.nMaxFile    = MAX_PATH;
     ofn.Flags       = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY;
@@ -626,7 +626,7 @@ void ShaderWindow::SaveProfile()
     ZeroMemory(&ofn, sizeof(ofn));
     ofn.lStructSize = sizeof(ofn);
     ofn.hwndOwner   = NULL;
-    ofn.lpstrFilter = (LPCWSTR)L"ShaderGlass Profiles (*.sgp)\0*.sgp\0All Files (*.*)\0*.*\0";
+    ofn.lpstrFilter = (LPCWSTR)L"ShaderGlass 配置 (*.sgp)\0*.sgp\0所有文件 (*.*)\0*.*\0";
     ofn.lpstrFile   = (LPWSTR)szFileName;
     ofn.nMaxFile    = MAX_PATH;
     ofn.Flags       = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY;
@@ -667,7 +667,7 @@ void ShaderWindow::CompileThreadFunc()
             bool          warn;
             auto          preset = ShaderGC::CompilePreset(m_importPath, log, warn, cache);
             if(preset == nullptr)
-                throw std::runtime_error("Internal error");
+                throw std::runtime_error("内部错误");
             auto id      = m_captureManager.AddPreset(preset);
             m_numPresets = (unsigned int)m_captureManager.Presets().size();
             SendMessage(m_browserWindow, WM_COMMAND, WM_USER + 1, id);
@@ -675,7 +675,7 @@ void ShaderWindow::CompileThreadFunc()
         }
         catch(file_error& ex)
         {
-            errorMsg = std::string(ex.what()) + "\r\n\r\nIf this is a RetroArch preset pack, install it in RetroArch's directory first\r\nand import into ShaderGlass from there.";
+            errorMsg = std::string(ex.what()) + "\r\n\r\n如需导入 RetroArch 预设包，请先安装到 RetroArch 目录，再从该目录导入。";
         }
         catch(std::exception& ex)
         {
@@ -687,7 +687,7 @@ void ShaderWindow::CompileThreadFunc()
 
         if(errorMsg.size())
         {
-            MessageBox(m_mainWindow, convertCharArrayToLPCWSTR(errorMsg.c_str()), L"ShaderGlass", MB_OK);
+            MessageBox(m_mainWindow, Utf8ToWide(errorMsg).c_str(), L"ShaderGlass", MB_OK);
         }
 
         if(m_forceStart)
@@ -813,7 +813,7 @@ void ShaderWindow::ScanWindows()
     }
     else if(HasCaptureLib())
     {
-        m_captureWindows.emplace_back(HWND_BROADCAST, L"Choose...");
+        m_captureWindows.emplace_back(HWND_BROADCAST, L"选择窗口…");
     }
 
     UINT i = 0;
@@ -843,7 +843,7 @@ void ShaderWindow::ScanDevices()
 
     if(!captureDevices.size())
     {
-        InsertMenu(m_deviceMenu, 1, MF_STRING | MF_DISABLED | MF_GRAYED, ID_DEVICE_NODEVICESFOUND, TEXT("No capture devices"));
+        InsertMenu(m_deviceMenu, 1, MF_STRING | MF_DISABLED | MF_GRAYED, ID_DEVICE_NODEVICESFOUND, TEXT("未找到捕获设备"));
         return;
     }
 
@@ -1010,7 +1010,7 @@ void ShaderWindow::BuildShaderMenu()
     // now deferred to BrowserWindow
     m_numPresets = (unsigned int)m_captureManager.Presets().size();
     if(m_numPresets >= MAX_SHADERS)
-        throw std::runtime_error("Too many shaders!");
+        throw std::runtime_error("着色器数量超出上限。");
 
     m_importsMenu = CreatePopupMenu();
     InsertMenu(m_shaderMenu, 7, MF_BYPOSITION | MF_STRING | MF_POPUP, (UINT_PTR)m_importsMenu, L"最近导入");
@@ -1409,11 +1409,11 @@ void ShaderWindow::UpdateTitle()
     }
     else if(m_firstStart)
     {
-        SetWindowTextW(m_mainWindow, _T("ShaderGlass (no input selected)"));
+        SetWindowTextW(m_mainWindow, _T("ShaderGlass（尚未选择输入）"));
     }
     else
     {
-        SetWindowTextW(m_mainWindow, _T("ShaderGlass (stopped)"));
+        SetWindowTextW(m_mainWindow, _T("ShaderGlass（已停止）"));
     }
 }
 
@@ -1910,7 +1910,7 @@ LRESULT CALLBACK ShaderWindow::WndProc(HWND hWnd, UINT message, WPARAM wParam, L
 
             auto& hk = m_hotkeys.at(wmId);
             StartDialog();
-            hk.currentKey = m_hotkeyDialog->GetHotkey(hk.name, hk.currentKey);
+            hk.currentKey = m_hotkeyDialog->GetHotkey(hk.label, hk.currentKey);
             EndDialog();
             SaveHotkey(hk);
             UpdateHotkey(hk, globalState);
@@ -2057,7 +2057,7 @@ LRESULT CALLBACK ShaderWindow::WndProc(HWND hWnd, UINT message, WPARAM wParam, L
                         else
                         {
                             StartDialog();
-                            float customInput = m_inputDialog->GetInput("Aspect Ratio Correction (Pixel Height):", aspectRatio->second.r);
+                            float customInput = m_inputDialog->GetInput(L"宽高比校正（像素高度）：", aspectRatio->second.r);
                             EndDialog();
                             if(std::isnan(customInput))
                                 break;
@@ -2589,7 +2589,7 @@ bool ShaderWindow::Create(_In_ HINSTANCE hInstance, _In_ int nCmdShow)
     else
     {
         ModifyMenu(
-            m_advancedMenu, ID_ADVANCED_MAXCAPTUREFRAMERATE, MF_BYCOMMAND | MF_STRING | MF_DISABLED | MF_GRAYED, ID_ADVANCED_MAXCAPTUREFRAMERATE, L"Max Capture Rate (Win11 24H2)");
+            m_advancedMenu, ID_ADVANCED_MAXCAPTUREFRAMERATE, MF_BYCOMMAND | MF_STRING | MF_DISABLED | MF_GRAYED, ID_ADVANCED_MAXCAPTUREFRAMERATE, L"最高捕获帧率（Windows 11 24H2）");
     }
 
     m_captureOptions.monitor      = nullptr;
@@ -3036,28 +3036,28 @@ void ShaderWindow::UpdateHotkey(const HotkeyInfo& hk, bool globalState)
         if(HasCaptureAPI())
         {
             checked = m_captureOptions.captureCursor ? MF_CHECKED : MF_UNCHECKED;
-            _snwprintf_s(text, 60, L"Capture Cursor\t%s", keyString.c_str());
+            _snwprintf_s(text, 60, L"捕获光标\t%s", keyString.c_str());
             ModifyMenu(m_inputMenu, IDM_INPUT_CAPTURECURSOR, MF_BYCOMMAND | MF_STRING | checked, IDM_INPUT_CAPTURECURSOR, text);
         }
         break;
     case ID_GLOBALHOTKEYS_FULLSCREEN:
-        _snwprintf_s(text, 60, L"Fullscreen\t%s", keyString.c_str());
+        _snwprintf_s(text, 60, L"全屏\t%s", keyString.c_str());
         ModifyMenu(m_outputMenu, ID_PROCESSING_FULLSCREEN, MF_BYCOMMAND | MF_STRING, ID_PROCESSING_FULLSCREEN, text);
         break;
     case ID_GLOBALHOTKEYS_PAUSE:
-        _snwprintf_s(text, 60, L"Pause/Unpause\t%s", keyString.c_str());
+        _snwprintf_s(text, 60, L"暂停/继续\t%s", keyString.c_str());
         ModifyMenu(m_programMenu, ID_PROCESSING_PAUSE, MF_BYCOMMAND | MF_STRING, ID_PROCESSING_PAUSE, text);
         break;
     case ID_GLOBALHOTKEYS_SCREENSHOT:
-        _snwprintf_s(text, 60, L"Take Snapshot...\t%s", keyString.c_str());
+        _snwprintf_s(text, 60, L"截屏…\t%s", keyString.c_str());
         ModifyMenu(m_outputMenu, ID_PROCESSING_SCREENSHOT, MF_BYCOMMAND | MF_STRING, ID_PROCESSING_SCREENSHOT, text);
         break;
     case ID_GLOBALHOTKEYS_ACTIVE:
-        _snwprintf_s(text, 60, L"Active\t%s | TAB", keyString.c_str());
+        _snwprintf_s(text, 60, L"启用\t%s | Tab", keyString.c_str());
         ModifyMenu(m_shaderMenu, ID_QUICK_TOGGLE, MF_BYCOMMAND | MF_STRING, ID_QUICK_TOGGLE, text);
         break;
     case ID_GLOBALHOTKEYS_SHOWMENU:
-        _snwprintf_s(text, 60, L"Toggle Menu\t%s", keyString.c_str());
+        _snwprintf_s(text, 60, L"显示/隐藏菜单\t%s", keyString.c_str());
         ModifyMenu(m_programMenu, IDM_TOGGLEMENU, MF_BYCOMMAND | MF_STRING, IDM_TOGGLEMENU, text);
         break;
     }
@@ -3065,12 +3065,12 @@ void ShaderWindow::UpdateHotkey(const HotkeyInfo& hk, bool globalState)
 
 void ShaderWindow::LoadHotkeys()
 {
-    m_hotkeys.emplace(ID_GLOBALHOTKEYS_FULLSCREEN, HotkeyInfo(ID_GLOBALHOTKEYS_FULLSCREEN, MAKEWORD('G', MOD_CONTROL | MOD_SHIFT), L"Fullscreen Key", L"g"));
-    m_hotkeys.emplace(ID_GLOBALHOTKEYS_SCREENSHOT, HotkeyInfo(ID_GLOBALHOTKEYS_SCREENSHOT, MAKEWORD('S', MOD_CONTROL | MOD_SHIFT), L"Screenshot Key", L"s"));
-    m_hotkeys.emplace(ID_GLOBALHOTKEYS_PAUSE, HotkeyInfo(ID_GLOBALHOTKEYS_PAUSE, 0, L"Pause Key", L"t"));
-    m_hotkeys.emplace(ID_GLOBALHOTKEYS_CURSOR, HotkeyInfo(ID_GLOBALHOTKEYS_CURSOR, 0, L"Cursor Key", L"c"));
-    m_hotkeys.emplace(ID_GLOBALHOTKEYS_ACTIVE, HotkeyInfo(ID_GLOBALHOTKEYS_ACTIVE, 0, L"Active Key", L"a"));
-    m_hotkeys.emplace(ID_GLOBALHOTKEYS_SHOWMENU, HotkeyInfo(ID_GLOBALHOTKEYS_SHOWMENU, 0, L"Menu Key", L"m"));
+    m_hotkeys.emplace(ID_GLOBALHOTKEYS_FULLSCREEN, HotkeyInfo(ID_GLOBALHOTKEYS_FULLSCREEN, MAKEWORD('G', MOD_CONTROL | MOD_SHIFT), L"Fullscreen Key", L"全屏快捷键", L"g"));
+    m_hotkeys.emplace(ID_GLOBALHOTKEYS_SCREENSHOT, HotkeyInfo(ID_GLOBALHOTKEYS_SCREENSHOT, MAKEWORD('S', MOD_CONTROL | MOD_SHIFT), L"Screenshot Key", L"截屏快捷键", L"s"));
+    m_hotkeys.emplace(ID_GLOBALHOTKEYS_PAUSE, HotkeyInfo(ID_GLOBALHOTKEYS_PAUSE, 0, L"Pause Key", L"暂停快捷键", L"t"));
+    m_hotkeys.emplace(ID_GLOBALHOTKEYS_CURSOR, HotkeyInfo(ID_GLOBALHOTKEYS_CURSOR, 0, L"Cursor Key", L"捕获光标快捷键", L"c"));
+    m_hotkeys.emplace(ID_GLOBALHOTKEYS_ACTIVE, HotkeyInfo(ID_GLOBALHOTKEYS_ACTIVE, 0, L"Active Key", L"切换着色器快捷键", L"a"));
+    m_hotkeys.emplace(ID_GLOBALHOTKEYS_SHOWMENU, HotkeyInfo(ID_GLOBALHOTKEYS_SHOWMENU, 0, L"Menu Key", L"显示/隐藏菜单快捷键", L"m"));
 }
 
 void ShaderWindow::UpdateHotkeys(bool globalHotkeys)

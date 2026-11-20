@@ -45,7 +45,7 @@ static INT_PTR CALLBACK InputProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM
             cchInput = (WORD)SendDlgItemMessage(hDlg, IDC_EDIT1, EM_LINELENGTH, (WPARAM)0, (LPARAM)0);
             if(cchInput >= 16)
             {
-                MessageBox(hDlg, L"Too many characters.", L"Error", MB_OK);
+                MessageBox(hDlg, L"输入的字符过多。", L"错误", MB_OK);
 
                 EndDialog(hDlg, FALSE);
                 return FALSE;
@@ -74,7 +74,7 @@ static INT_PTR CALLBACK InputProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM
             }
             catch(std::exception&)
             {
-                MessageBox(hDlg, L"Invalid value entered.", L"Error", MB_OK);
+                MessageBox(hDlg, L"请输入有效数值。", L"错误", MB_OK);
                 EndDialog(hDlg, FALSE);
                 return TRUE;
             }
@@ -93,11 +93,12 @@ static INT_PTR CALLBACK InputProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM
     UNREFERENCED_PARAMETER(lParam);
 }
 
-float InputDialog::GetInput(const std::string& name, float value)
+float InputDialog::GetInput(const wchar_t* label, float value)
 {
     inputValue    = value;
-    labelText     = convertCharArrayToLPCWSTR(name.c_str());
-    startingValue = convertCharArrayToLPCWSTR(std::to_string(value).c_str());
+    labelText     = label;
+    const auto initialValue = std::to_wstring(value);
+    startingValue = initialValue.c_str();
     if(DialogBox(m_instance, MAKEINTRESOURCE(IDD_INPUT_DIALOG), m_mainWindow, InputProc) == IDOK)
         return inputValue;
     return NAN;

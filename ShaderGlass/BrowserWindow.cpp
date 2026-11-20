@@ -216,7 +216,7 @@ void BrowserWindow::CreatePixelSizeSlider(const RECT& rcClient)
 {
     m_pixelSizeTrackBar = CreateWindowEx(0,
                                          TRACKBAR_CLASS,
-                                         L"Trackbar Control",
+                                         L"像素大小滑块",
                                          WS_CHILD | WS_VISIBLE | TBS_AUTOTICKS,
                                          (LONG)(m_dpiScale * STATIC_WIDTH),
                                          (LONG)(rcClient.bottom - (PANEL_HEIGHT * 2 * m_dpiScale)),
@@ -241,7 +241,7 @@ void BrowserWindow::CreatePixelSizeSlider(const RECT& rcClient)
 
     m_pixelSizeLabel = CreateWindowEx(0,
                                       L"STATIC",
-                                      L"Pixel Size",
+                                      L"像素大小",
                                       SS_RIGHT | SS_NOTIFY | WS_CHILD | WS_VISIBLE,
                                       2,
                                       0,
@@ -276,18 +276,82 @@ void BrowserWindow::BeginTree()
     hPrevLev3Item = NULL;
 }
 
+// Display names for library folders. Preset keys stay in their original form.
+static std::string LocalizedCategory(const std::string& category)
+{
+    static const std::map<std::string, std::string> names = {
+        {"anamorphic", "变形宽银幕"},
+        {"anti-aliasing", "抗锯齿"},
+        {"bezel", "屏幕外框"},
+        {"blurs", "模糊"},
+        {"border", "边框"},
+        {"cel", "卡通渲染"},
+        {"crt-effects", "CRT 效果"},
+        {"deblur", "去模糊"},
+        {"deinterlacing", "去隔行"},
+        {"denoisers", "降噪"},
+        {"dithering", "抖动"},
+        {"edge-smoothing", "边缘平滑"},
+        {"film", "胶片"},
+        {"general", "通用"},
+        {"handheld", "掌机"},
+        {"color-mod", "色彩调整"},
+        {"console-border", "主机边框"},
+        {"interpolation", "插值"},
+        {"linear-gamma-presets", "线性伽马预设"},
+        {"linear", "线性"},
+        {"misc", "其他"},
+        {"motion-interpolation", "运动插帧"},
+        {"motionblur", "运动模糊"},
+        {"nes_raw_palette", "NES 原始调色板"},
+        {"pixel-art-scaling", "像素画缩放"},
+        {"presets", "预设"},
+        {"downsample", "降采样"},
+        {"handheld-color-LUTs", "掌机色彩查找表"},
+        {"pixel_transparency", "像素透明度"},
+        {"scanlines", "扫描线"},
+        {"sharpen", "锐化"},
+        {"stereoscopic-3d", "立体 3D"},
+        {"stock", "基础"},
+        {"aperture-grille", "孔栅"},
+        {"shadow-mask", "荫罩"},
+        {"slot-mask", "槽形遮罩"},
+        {"curved-screen", "曲面屏"},
+        {"flat-screen", "平面屏"},
+        {"tvout", "电视输出"},
+        {"tvout-interlacing", "电视隔行输出"},
+        {"test", "测试"},
+    };
+
+    std::string result;
+    size_t begin = 0;
+    while(begin < category.size())
+    {
+        const auto slash = category.find('/', begin);
+        const auto part = category.substr(begin, slash - begin);
+        const auto match = names.find(part);
+        if(!result.empty())
+            result += '/';
+        result += match == names.end() ? part : match->second;
+        if(slash == std::string::npos)
+            break;
+        begin = slash + 1;
+    }
+    return result;
+}
+
 HTREEITEM BrowserWindow::AddItemToTree(HWND hwndTV, const char* text, LPARAM lParam, int nLevel)
 {
     TVITEM         tvi;
     TVINSERTSTRUCT tvins;
     HTREEITEM      hti;
-    LPTSTR         lpszItem = convertCharArrayToLPCWSTR(text);
+    auto           itemText = Utf8ToWide(text);
 
     tvi.mask = TVIF_TEXT | TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_PARAM;
 
     // Set the text of the item.
-    tvi.pszText    = lpszItem;
-    tvi.cchTextMax = sizeof(tvi.pszText) / sizeof(tvi.pszText[0]);
+    tvi.pszText    = itemText.data();
+    tvi.cchTextMax = static_cast<int>(itemText.size() + 1);
 
     // Assume the item is not a parent item, so give it a
     // document image.
@@ -353,7 +417,7 @@ void BrowserWindow::Build()
     GetClientRect(m_mainWindow, &rcClient);
     m_treeControl = CreateWindowEx(WS_EX_STATICEDGE,
                                    WC_TREEVIEW,
-                                   TEXT("Shader Tree"),
+                                   TEXT("着色器目录"),
                                    WS_VISIBLE | WS_CHILD | TVS_HASLINES | TVS_LINESATROOT | TVS_HASBUTTONS | TVS_SHOWSELALWAYS /* | TVS_FULLROWSELECT*/,
                                    0,
                                    (LONG)(SEARCH_HEIGHT * 1 * m_dpiScale),
@@ -366,7 +430,7 @@ void BrowserWindow::Build()
 
     m_resultsControl = CreateWindowEx(WS_EX_STATICEDGE,
                                       WC_TREEVIEW,
-                                      TEXT("Search Results"),
+                                      TEXT("搜索结果"),
                                       WS_CHILD | TVS_HASLINES | TVS_LINESATROOT | TVS_HASBUTTONS | TVS_SHOWSELALWAYS /* | TVS_FULLROWSELECT*/,
                                       0,
                                       (LONG)(SEARCH_HEIGHT * 1 * m_dpiScale),
@@ -383,7 +447,7 @@ void BrowserWindow::Build()
 
     m_searchLabel = CreateWindowEx(0,
                                    L"STATIC",
-                                   L"Search: ",
+                                   L"搜索：",
                                    SS_RIGHT | SS_NOTIFY | WS_CHILD | WS_VISIBLE,
                                    0,
                                    0,
@@ -410,7 +474,7 @@ void BrowserWindow::Build()
     SendMessage(m_searchBox, WM_SETFONT, (LPARAM)m_font, true);
 
     m_clearButton = CreateWindow(L"BUTTON",
-                                 L"Clear",
+                                 L"清空",
                                  WS_TABSTOP | WS_VISIBLE | WS_CHILD,
                                  rcClient.right - (LONG)(m_dpiScale * SEARCH_WIDTH * 5),
                                  0,
@@ -426,13 +490,13 @@ void BrowserWindow::Build()
 
     auto noneItem = AddNoneItem(m_treeControl, m_items);
 
-    m_personalItems = AddItemToTree(m_treeControl, "Personal Favorites", -1, 1);
+    m_personalItems = AddItemToTree(m_treeControl, "个人收藏", -1, 1);
 
     LoadPersonal();
 
-    m_imported = AddItemToTree(m_treeControl, "Imported", -1, 1);
+    m_imported = AddItemToTree(m_treeControl, "已导入", -1, 1);
 
-    AddItemToTree(m_treeControl, "Community Favorites", -1, 1);
+    AddItemToTree(m_treeControl, "社区精选", -1, 1);
 
     for(int fp = 0; fp < sizeof(favoritePresets) / sizeof(const char*); fp++)
     {
@@ -469,7 +533,7 @@ void BrowserWindow::Build()
     CreatePixelSizeSlider(rcClient);
 
     m_addFavButton = CreateWindow(L"BUTTON",
-                                  L"Add Favorite",
+                                  L"添加收藏",
                                   WS_TABSTOP | WS_VISIBLE | WS_CHILD,
                                   0,
                                   rcClient.bottom - (LONG)(PANEL_HEIGHT * m_dpiScale),
@@ -482,7 +546,7 @@ void BrowserWindow::Build()
     SendMessage(m_addFavButton, WM_SETFONT, (LPARAM)m_font, true);
 
     m_delFavButton = CreateWindow(L"BUTTON",
-                                  L"Remove Favorite",
+                                  L"取消收藏",
                                   WS_TABSTOP | WS_VISIBLE | WS_CHILD,
                                   (LONG)(BUTTON_WIDTH * m_dpiScale),
                                   rcClient.bottom - (LONG)(PANEL_HEIGHT * m_dpiScale),
@@ -495,7 +559,7 @@ void BrowserWindow::Build()
     SendMessage(m_delFavButton, WM_SETFONT, (LPARAM)m_font, true);
 
     m_paramsButton = CreateWindow(L"BUTTON",
-                                  L"Parameters",
+                                  L"参数",
                                   WS_TABSTOP | WS_VISIBLE | WS_CHILD,
                                   (LONG)(BUTTON_WIDTH * 2 * m_dpiScale),
                                   rcClient.bottom - (LONG)(PANEL_HEIGHT * m_dpiScale),
@@ -525,7 +589,7 @@ HTREEITEM BrowserWindow::AddNoneItem(HWND ctrl, std::map<UINT, HTREEITEM>& items
         if(sp->Category == "general")
         {
             auto id       = WM_SHADER(i);
-            auto noneItem = AddItemToTree(m_treeControl, sp->Name.c_str(), id, 1);
+            auto noneItem = AddItemToTree(ctrl, "无（不使用着色器）", id, 1);
             items[id]     = noneItem;
             return noneItem;
         }
@@ -568,14 +632,14 @@ HTREEITEM BrowserWindow::BuildTree(HWND ctrl, std::map<UINT, HTREEITEM>& items, 
             categoryMenus.insert(std::make_pair(sp->Category, std::map<std::string, UINT, decltype(shaderComp)>()));
         }
         auto& menu = categoryMenus.find(sp->Category)->second;
-        if(filter.empty() || contains_ic(sp->Name, filter) || contains_ic(sp->Category, filter))
+        if(filter.empty() || contains_ic(sp->Name, filter) || contains_ic(sp->Category, filter) || contains_ic(LocalizedCategory(sp->Category), filter))
         {
             menu.insert(std::make_pair(sp->Name, WM_SHADER(i)));
         }
         i++;
     }
 
-    auto raItem = AddItemToTree(ctrl, "RetroArch Library", -1, 1);
+    auto raItem = AddItemToTree(ctrl, "RetroArch 着色器库", -1, 1);
 
     std::string parentCategory("");
     int         level = 2;
@@ -592,10 +656,10 @@ HTREEITEM BrowserWindow::BuildTree(HWND ctrl, std::map<UINT, HTREEITEM>& items, 
             {
                 // add new parent
                 parentCategory = thisParent;
-                AddItemToTree(ctrl, parentCategory.c_str(), -1, 2);
+                AddItemToTree(ctrl, LocalizedCategory(parentCategory).c_str(), -1, 2);
             }
             level = 3;
-            AddItemToTree(ctrl, m.first.substr(slash + 1).c_str(), -1, level);
+            AddItemToTree(ctrl, LocalizedCategory(m.first.substr(slash + 1)).c_str(), -1, level);
         }
         else if(m.first == parentCategory)
         {
@@ -610,7 +674,7 @@ HTREEITEM BrowserWindow::BuildTree(HWND ctrl, std::map<UINT, HTREEITEM>& items, 
                 parentCategory = "";
             }
             level = 2;
-            AddItemToTree(ctrl, m.first.c_str(), -1, level);
+            AddItemToTree(ctrl, LocalizedCategory(m.first).c_str(), -1, level);
         }
         for(auto p : m.second)
         {
@@ -925,8 +989,9 @@ LRESULT CALLBACK BrowserWindow::WndProc(HWND hWnd, UINT message, WPARAM wParam, 
             is.hParent             = m_imported;
             is.hInsertAfter        = TVI_LAST;
             is.item.mask           = TVIF_TEXT | TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_PARAM;
-            is.item.pszText        = convertCharArrayToLPCWSTR(m_captureManager.Presets().at(lParam)->Name.c_str());
-            is.item.cchTextMax     = sizeof(is.item.pszText) / sizeof(is.item.pszText[0]);
+            auto itemText = Utf8ToWide(m_captureManager.Presets().at(lParam)->Name);
+            is.item.pszText = itemText.data();
+            is.item.cchTextMax     = static_cast<int>(itemText.size() + 1);
             is.item.iImage         = g_nDocument;
             is.item.iSelectedImage = g_nDocument;
             is.item.lParam         = id;
@@ -953,7 +1018,7 @@ LRESULT CALLBACK BrowserWindow::WndProc(HWND hWnd, UINT message, WPARAM wParam, 
                 if(p->maxValue != p->minValue)
                     params.insert(p->name);
             }
-            _snwprintf_s(paramsCaption, 50, _T("Parameters (%lu)"), params.size());
+            _snwprintf_s(paramsCaption, 50, _T("参数（%zu）"), params.size());
             SetWindowText(m_paramsButton, paramsCaption);
             return 0;
         }
@@ -978,8 +1043,9 @@ LRESULT CALLBACK BrowserWindow::WndProc(HWND hWnd, UINT message, WPARAM wParam, 
                     is.hParent             = m_personalItems;
                     is.hInsertAfter        = TVI_LAST;
                     is.item.mask           = TVIF_TEXT | TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_PARAM;
-                    is.item.pszText        = convertCharArrayToLPCWSTR(preset->Name.c_str());
-                    is.item.cchTextMax     = sizeof(is.item.pszText) / sizeof(is.item.pszText[0]);
+                    auto itemText = Utf8ToWide(preset->Name);
+                    is.item.pszText = itemText.data();
+                    is.item.cchTextMax     = static_cast<int>(itemText.size() + 1);
                     is.item.iImage         = g_nDocument;
                     is.item.iSelectedImage = g_nDocument;
                     is.item.lParam         = id;

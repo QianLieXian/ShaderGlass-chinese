@@ -110,10 +110,11 @@ struct CaptureDevice
 
 struct HotkeyInfo
 {
-    HotkeyInfo(UINT id, WORD defaultKey, const wchar_t* name, const wchar_t* accelerator) :
-        id {id}, currentKey {defaultKey}, defaultKey {defaultKey}, name {name}, accelerator {accelerator}
+    HotkeyInfo(UINT id, WORD defaultKey, const wchar_t* name, const wchar_t* label, const wchar_t* accelerator) :
+        id {id}, currentKey {defaultKey}, defaultKey {defaultKey}, name {name}, label {label}, accelerator {accelerator}
     { }
     const wchar_t* name;
+    const wchar_t* label;
     UINT           id;
     WORD           currentKey;
     WORD           defaultKey;
@@ -137,18 +138,18 @@ static const std::map<UINT, PixelSizeInfo> pixelSizes = {{WM_PIXEL_SIZE(0), Pixe
                                                          {WM_PIXEL_SIZE(14), PixelSizeInfo(10.8f, 10.8f, L"×10.8 (200p → 4K)", "10.8")}};
 
 static std::map<UINT, AspectRatioInfo> aspectRatios = {
-    {WM_ASPECT_RATIO(0), AspectRatioInfo(1.0f, L"None", "1")},
+    {WM_ASPECT_RATIO(0), AspectRatioInfo(1.0f, L"无", "1")},
     {WM_ASPECT_RATIO(1), AspectRatioInfo(1.2f, L"x1.2 (DOS, NTSC)", "1.2")},
     {WM_ASPECT_RATIO(2), AspectRatioInfo(0.9375f, L"x0.94 (PAL)", "0.94")},
     {WM_ASPECT_RATIO(3), AspectRatioInfo(0.8f, L"x0.8 (NES)", "0.8")},
     {WM_ASPECT_RATIO(4), AspectRatioInfo(0.857143f, L"x0.86 (SNES)", "0.86")},
-    {WM_ASPECT_RATIO(5), AspectRatioInfo(0.5f, L"x0.5 (double wide)", "0.5")},
-    {WM_ASPECT_RATIO(6), AspectRatioInfo(2.0f, L"x2.0 (double tall)", "2.0")},
-    {WM_ASPECT_RATIO(7), AspectRatioInfo(1.0f, L"Custom", CUSTOM_MNEMONIC)},
-    {WM_ASPECT_RATIO(8), AspectRatioInfo(0.0f, L"Stretch", "0")},
+    {WM_ASPECT_RATIO(5), AspectRatioInfo(0.5f, L"×0.5（双倍宽度）", "0.5")},
+    {WM_ASPECT_RATIO(6), AspectRatioInfo(2.0f, L"×2.0（双倍高度）", "2.0")},
+    {WM_ASPECT_RATIO(7), AspectRatioInfo(1.0f, L"自定义", CUSTOM_MNEMONIC)},
+    {WM_ASPECT_RATIO(8), AspectRatioInfo(0.0f, L"拉伸", "0")},
 };
 
-static const std::map<UINT, FrameSkipInfo> frameSkips = {{WM_FRAME_SKIP(0), FrameSkipInfo(0, L"100% (VSync)", "1")},
+static const std::map<UINT, FrameSkipInfo> frameSkips = {{WM_FRAME_SKIP(0), FrameSkipInfo(0, L"100%（垂直同步）", "1")},
                                                          {WM_FRAME_SKIP(1), FrameSkipInfo(1, L"1 / 2", "2")},
                                                          {WM_FRAME_SKIP(2), FrameSkipInfo(2, L"1 / 3", "3")},
                                                          {WM_FRAME_SKIP(3), FrameSkipInfo(3, L"1 / 4", "4")},

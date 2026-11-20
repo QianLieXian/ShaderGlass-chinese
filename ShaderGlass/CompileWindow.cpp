@@ -104,7 +104,7 @@ void CompileWindow::Build()
     GetClientRect(m_mainWindow, &rcClient);
     m_textControl = CreateWindowEx(0,
                                    L"STATIC",
-                                   TEXT("Compiling shader...\r\n"),
+                                   TEXT("正在编译着色器…\r\n"),
                                    SS_CENTER | SS_CENTERIMAGE | WS_VISIBLE | WS_CHILD,
                                    0,
                                    0,
