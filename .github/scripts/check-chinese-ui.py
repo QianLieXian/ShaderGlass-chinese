@@ -82,6 +82,9 @@ def open_window(command, class_name, main, process):
 exe = Path(sys.argv[1]).resolve()
 with subprocess.Popen([str(exe), "-paused"], cwd=exe.parent) as process:
     try:
+        # CreateWindow exposes the resource menu before ShaderWindow builds its
+        # dynamic submenus. The browser is created after that initialization.
+        wait_for(lambda: find_window("SHADERBROWSER", None), process)
         main = wait_for(lambda: (hwnd := find_window("SHADERGLASS", None)) and get_menu(hwnd) and hwnd, process)
         sections = dict(menu_items(get_menu(main)))
         require_labels(["处理", "输入", "输出", "着色器", "帮助"], sections)
